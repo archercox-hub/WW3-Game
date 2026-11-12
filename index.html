@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Global Conflict: WW3</title>
+<title>Global Conflict: WW3 Multiplayer Server</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
   body { background: #0b1120; color: #f8fafc; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -12,19 +12,20 @@
     background: #1e293b; border-bottom: 1px solid #334155;
     padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
   }
-  .title { font-weight: 800; font-size: 1.1rem; color: #38bdf8; }
-  .pill { background: #0f172a; padding: 6px 12px; border-radius: 6px; border: 1px solid #334155; font-size: 0.85rem; }
+  .title { font-weight: 800; font-size: 1.05rem; color: #38bdf8; }
+  .pill { background: #0f172a; padding: 6px 12px; border-radius: 6px; border: 1px solid #334155; font-size: 0.82rem; }
   .pill span { font-weight: bold; color: #38bdf8; }
 
   button {
-    background: #38bdf8; color: #0f172a; border: none; padding: 8px 14px;
-    border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem;
+    background: #38bdf8; color: #0f172a; border: none; padding: 7px 13px;
+    border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.82rem;
   }
   button:hover { background: #0284c7; color: white; }
   button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
   .btn-attack { background: #ef4444; color: white; }
   .btn-attack:hover { background: #dc2626; }
-  .btn-day { background: #22c55e; color: #0f172a; }
+  .btn-green { background: #22c55e; color: #0f172a; }
+  .btn-green:hover { background: #16a34a; color: white; }
 
   .main { display: flex; flex: 1; overflow: hidden; }
   .map-box { flex: 1; display: flex; justify-content: center; align-items: center; overflow: auto; background: #060a14; }
@@ -35,24 +36,81 @@
   .land.selected { stroke: #facc15; stroke-width: 3.5; }
   .map-text { fill: #ffffff; font-size: 12px; font-weight: bold; pointer-events: none; }
 
-  .sidebar { width: 380px; background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; }
-  .panel { flex: 1; overflow-y: auto; padding: 15px; }
+  .sidebar { width: 390px; background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; }
+  .tabs { display: flex; border-bottom: 1px solid #334155; }
+  .tab { flex: 1; padding: 10px; text-align: center; background: #0f172a; color: #94a3b8; cursor: pointer; font-weight: bold; font-size: 0.82rem; }
+  .tab.active { background: #1e293b; color: #38bdf8; border-bottom: 2px solid #38bdf8; }
+
+  .panel { flex: 1; overflow-y: auto; padding: 15px; display: none; }
+  .panel.active { display: block; }
   h3 { color: #38bdf8; font-size: 0.95rem; margin: 12px 0 8px 0; border-bottom: 1px solid #334155; padding-bottom: 4px; }
   h3:first-child { margin-top: 0; }
-  p { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 10px; line-height: 1.4; }
+  p { font-size: 0.82rem; color: #cbd5e1; margin-bottom: 8px; line-height: 1.4; }
 
-  .card { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+  .card { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
   .unit-row { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #334155; font-size: 0.82rem; }
   .log-box { height: 120px; background: #060a14; border-top: 1px solid #334155; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.78rem; color: #94a3b8; }
+
+  /* Host / Join Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(6, 10, 20, 0.95); display: flex; justify-content: center; align-items: center; z-index: 50; }
+  .modal { background: #1e293b; border: 1px solid #38bdf8; border-radius: 10px; padding: 22px; width: 520px; max-width: 95vw; }
+  .modal h2 { color: #38bdf8; text-align: center; margin-bottom: 10px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .box { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+  input, select, textarea { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #334155; background: #060a14; color: white; font-size: 0.82rem; margin-bottom: 8px; }
+  textarea { height: 55px; resize: none; font-family: monospace; font-size: 0.72rem; }
 </style>
 </head>
 <body>
 
+<!-- HOST / JOIN MATCH LOBBY -->
+<div class="overlay" id="lobby">
+  <div class="modal">
+    <h2>GLOBAL CONFLICT: WW3 SERVER</h2>
+    <p style="text-align:center;">Host a persistent multi-day match or join a classmate's server.</p>
+    
+    <label style="font-size:0.8rem; color:#94a3b8;">Commander Name:</label>
+    <input type="text" id="cmd-name" value="Commander">
+
+    <label style="font-size:0.8rem; color:#94a3b8;">Select Your Superpower:</label>
+    <select id="nation-pick">
+      <option value="1">United States (North America)</option>
+      <option value="2">European Union (Western & Eastern Europe)</option>
+      <option value="3">Russian Federation (Northern Eurasia)</option>
+      <option value="4">East Asian Coalition (China & Pacific)</option>
+      <option value="5">South American Union (South America)</option>
+      <option value="6">African Federation (Africa)</option>
+    </select>
+
+    <div class="grid">
+      <div class="box">
+        <h3>Host Server</h3>
+        <p>Start a new world match or resume your auto-saved game.</p>
+        <button class="btn-green" style="width:100%; margin-bottom:6px;" onclick="startHost(false)">Host New Match</button>
+        <button id="resume-btn" style="width:100%;" onclick="startHost(true)" disabled>Resume Saved Match</button>
+      </div>
+      <div class="box">
+        <h3>Join Match</h3>
+        <p>Paste the Host's Invite Code to connect:</p>
+        <textarea id="join-offer" placeholder="1. Paste Host Invite Code here..."></textarea>
+        <button style="width:100%;" onclick="startClient()">Generate Reply Code</button>
+        <div id="client-reply-wrap" style="display:none; margin-top:8px;">
+          <textarea id="join-answer" readonly onclick="this.select()"></textarea>
+          <p style="color:#22c55e; font-size:0.75rem;">2. Copy this Reply Code and send it to the Host!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="title">GLOBAL CONFLICT: WW3</div>
-  <div class="pill">Nation: <span id="nation-name">Loading...</span> | Day <span id="day-num">1</span></div>
+  <div class="pill">Role: <span id="role-label">HOST</span> | Nation: <span id="nation-name">None</span> | Day <span id="day-num">1</span></div>
   <div class="pill">Supplies: <span id="sup-num">0</span> | Fuel: <span id="fuel-num">0</span></div>
-  <button class="btn-day" onclick="nextDay()">Next Day (Income & Moves)</button>
+  <div style="display:flex; gap:6px;">
+    <button id="btn-next-day" class="btn-green" style="display:none;" onclick="nextDay()">Advance World Day</button>
+    <button onclick="downloadSave()">Download Save</button>
+  </div>
 </header>
 
 <div class="main">
@@ -60,153 +118,60 @@
     <svg id="map" viewBox="0 0 900 540"></svg>
   </div>
   <div class="sidebar">
-    <div class="panel" id="sidebar-content"></div>
+    <div class="tabs">
+      <div class="tab active" id="tab-btn-play" onclick="openTab('play')">Command & Build</div>
+      <div class="tab" id="tab-btn-mp" onclick="openTab('mp')">Multiplayer & Save</div>
+    </div>
+
+    <!-- TAB 1: MAP ACTIONS & UNIT BUILDING -->
+    <div class="panel active" id="tab-play"></div>
+
+    <!-- TAB 2: HOST INVITES & SAVE FILES -->
+    <div class="panel" id="tab-mp">
+      <h3>Active Players in Match</h3>
+      <div id="player-list"></div>
+
+      <div class="card" id="host-tools" style="display:none; border-color:#38bdf8; margin-top:12px;">
+        <h3 style="margin-top:0;">Invite Classmates to Server</h3>
+        <p>1. Click below to create an Invite Code and send it to a friend:</p>
+        <button class="btn-green" style="width:100%; margin-bottom:6px;" onclick="makeInvite()">Create Invite Code</button>
+        <textarea id="host-offer-out" readonly placeholder="Invite code will appear here..." onclick="this.select()"></textarea>
+        
+        <p>2. Paste your friend's Reply Code below to connect them:</p>
+        <textarea id="host-answer-in" placeholder="Paste Reply Code here..."></textarea>
+        <button style="width:100%;" onclick="connectClient()">Connect Player</button>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h3 style="margin-top:0;">Load Saved Match File (.json)</h3>
+        <input type="file" accept=".json" onchange="uploadSave(event)">
+      </div>
+    </div>
+
     <div class="log-box" id="log-box"></div>
   </div>
 </div>
 
 <script>
-// 1. FIVE CORE MILITARY UNITS
+// 1. NATIONS & UNITS
+var NATIONS = {
+  1: { name: 'United States', color: '#2563eb', start: ['na_west', 'na_east'] },
+  2: { name: 'European Union', color: '#0284c7', start: ['eu_west', 'eu_east'] },
+  3: { name: 'Russian Federation', color: '#dc2626', start: ['russia', 'mideast'] },
+  4: { name: 'East Asian Coalition', color: '#ea580c', start: ['india', 'asia_east'] },
+  5: { name: 'South American Union', color: '#16a34a', start: ['sa', 'oceania'] },
+  6: { name: 'African Federation', color: '#9333ea', start: ['africa_west', 'africa_south'] }
+};
+
 var UNITS = [
-  { id: 'inf', name: 'Motorized Infantry', atk: 6, def: 8, hp: 20, rng: 1, sup: 150, fuel: 50, desc: 'Standard troops. Required to capture enemy land.' },
-  { id: 'recon', name: 'Armored Recon Car', atk: 9, def: 7, hp: 24, rng: 1, sup: 200, fuel: 100, desc: 'Fast light armored scout.' },
-  { id: 'tank', name: 'Main Battle Tank', atk: 18, def: 15, hp: 40, rng: 1, sup: 350, fuel: 200, desc: 'Heavy frontline armor.' },
+  { id: 'inf', name: 'Motorized Infantry', atk: 6, def: 8, hp: 20, rng: 1, sup: 150, fuel: 50, desc: 'Frontline troops. Captures enemy territories.' },
+  { id: 'recon', name: 'Armored Recon Car', atk: 9, def: 7, hp: 24, rng: 1, sup: 200, fuel: 100, desc: 'Fast armored scout vehicle.' },
+  { id: 'tank', name: 'Main Battle Tank', atk: 18, def: 15, hp: 40, rng: 1, sup: 350, fuel: 200, desc: 'Heavy frontline spearhead tank.' },
   { id: 'arty', name: 'Rocket Artillery', atk: 20, def: 5, hp: 20, rng: 2, sup: 300, fuel: 150, desc: 'Bombards targets up to 2 spaces away safely.' },
   { id: 'jet', name: 'Strike Fighter Jet', atk: 24, def: 10, hp: 25, rng: 3, sup: 400, fuel: 250, desc: 'Long-range air strike (3 spaces away).' }
 ];
 
-// 2. TWELVE WORLD TERRITORIES
 var MAP_DATA = [
   { id: 'na_west', name: 'Western America', x: 140, y: 150, path: 'M 50,80 L 210,80 L 200,220 L 60,210 Z', nb: ['na_east', 'sa', 'asia_east'] },
   { id: 'na_east', name: 'Eastern America', x: 265, y: 150, path: 'M 210,80 L 340,80 L 330,220 L 200,220 Z', nb: ['na_west', 'sa', 'eu_west'] },
   { id: 'sa', name: 'South America', x: 240, y: 370, path: 'M 170,250 L 310,260 L 280,490 L 190,470 Z', nb: ['na_west', 'na_east', 'africa_west'] },
-  { id: 'eu_west', name: 'Western Europe', x: 430, y: 140, path: 'M 380,80 L 485,80 L 480,200 L 380,195 Z', nb: ['na_east', 'eu_east', 'africa_west'] },
-  { id: 'eu_east', name: 'Eastern Europe', x: 540, y: 140, path: 'M 485,80 L 600,80 L 595,200 L 480,200 Z', nb: ['eu_west', 'russia', 'mideast'] },
-  { id: 'russia', name: 'Northern Eurasia', x: 700, y: 120, path: 'M 600,60 L 830,60 L 810,180 L 595,180 Z', nb: ['eu_east', 'asia_east', 'mideast'] },
-  { id: 'africa_west', name: 'North Africa', x: 445, y: 290, path: 'M 380,220 L 510,220 L 510,350 L 385,340 Z', nb: ['sa', 'eu_west', 'africa_south', 'mideast'] },
-  { id: 'africa_south', name: 'Southern Africa', x: 470, y: 420, path: 'M 405,350 L 535,355 L 515,495 L 425,485 Z', nb: ['africa_west'] },
-  { id: 'mideast', name: 'Middle East', x: 580, y: 270, path: 'M 515,210 L 645,210 L 645,335 L 515,335 Z', nb: ['eu_east', 'russia', 'africa_west', 'india'] },
-  { id: 'india', name: 'South Asia', x: 695, y: 290, path: 'M 645,220 L 750,220 L 735,365 L 650,350 Z', nb: ['mideast', 'asia_east', 'oceania'] },
-  { id: 'asia_east', name: 'East Asia', x: 790, y: 210, path: 'M 730,180 L 860,180 L 850,295 L 745,280 Z', nb: ['na_west', 'russia', 'india', 'oceania'] },
-  { id: 'oceania', name: 'Oceania', x: 800, y: 430, path: 'M 730,375 L 870,375 L 855,495 L 740,485 Z', nb: ['india', 'asia_east'] }
-];
-
-// 3. GENERATE RANDOM COUNTRY & GAME STATE
-var ADJECTIVES = ['United', 'Imperial', 'Federal', 'Republic of', 'Free State of', 'Dominion of'];
-var NAMES = ['Valoria', 'Aurelia', 'Nordland', 'Solaria', 'Vanguardia', 'Terranova', 'Ironhold', 'Hyperion'];
-var COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0284c7', '#db2777'];
-
-var state = {
-  day: 1,
-  myName: ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] + ' ' + NAMES[Math.floor(Math.random() * NAMES.length)],
-  myColor: COLORS[Math.floor(Math.random() * COLORS.length)],
-  supplies: 800,
-  fuel: 500,
-  selectedId: null,
-  selectedUnit: null,
-  provinces: {},
-  logs: []
-};
-
-function initGame() {
-  var startIdx = Math.floor(Math.random() * MAP_DATA.length);
-  for (var i = 0; i < MAP_DATA.length; i++) {
-    var m = MAP_DATA[i];
-    var isMine = (i === startIdx);
-    state.provinces[m.id] = {
-      id: m.id,
-      name: m.name,
-      x: m.x,
-      y: m.y,
-      path: m.path,
-      nb: m.nb,
-      owner: isMine ? 'PLAYER' : 'AI',
-      units: isMine
-        ? [
-            { id: 'inf', name: 'Motorized Infantry', owner: 'PLAYER', atk: 6, def: 8, hp: 20, maxHp: 20, rng: 1, moves: 2 },
-            { id: 'tank', name: 'Main Battle Tank', owner: 'PLAYER', atk: 18, def: 15, hp: 40, maxHp: 40, rng: 1, moves: 2 }
-          ]
-        : [
-            { id: 'inf', name: 'Garrison Infantry', owner: 'AI', atk: 5, def: 7, hp: 18, maxHp: 18, rng: 1, moves: 1 }
-          ]
-    };
-    if (isMine) {
-      state.selectedId = m.id;
-      addLog('Welcome! Your new nation "' + state.myName + '" started in ' + m.name + '.');
-    }
-  }
-  render();
-}
-
-function selectProvince(id) {
-  state.selectedId = id;
-  state.selectedUnit = null;
-  render();
-}
-
-function selectUnit(idx) {
-  state.selectedUnit = idx;
-  render();
-}
-
-function getTargets(startId, range) {
-  var visited = [startId];
-  var queue = [{ id: startId, dist: 0 }];
-  var results = [];
-  while (queue.length > 0) {
-    var curr = queue.shift();
-    if (curr.dist > 0) results.push(curr.id);
-    if (curr.dist < range) {
-      var neighbors = state.provinces[curr.id].nb;
-      for (var i = 0; i < neighbors.length; i++) {
-        if (visited.indexOf(neighbors[i]) === -1) {
-          visited.push(neighbors[i]);
-          queue.push({ id: neighbors[i], dist: curr.dist + 1 });
-        }
-      }
-    }
-  }
-  return results;
-}
-
-function orderUnit(targetId) {
-  var origin = state.provinces[state.selectedId];
-  var target = state.provinces[targetId];
-  var unit = origin.units[state.selectedUnit];
-  if (!unit || unit.moves <= 0) return;
-
-  unit.moves -= 1;
-
-  if (target.owner === 'PLAYER') {
-    origin.units.splice(state.selectedUnit, 1);
-    target.units.push(unit);
-    addLog(unit.name + ' moved to ' + target.name + '.');
-  } else {
-    var isRanged = (unit.id === 'arty' || unit.id === 'jet');
-    if (target.units.length === 0) {
-      if (unit.id === 'jet') {
-        addLog('Strike Fighter patrolled ' + target.name + ' (ground troops needed to capture).');
-      } else {
-        target.owner = 'PLAYER';
-        origin.units.splice(state.selectedUnit, 1);
-        target.units.push(unit);
-        addLog('CAPTURED! ' + target.name + ' now belongs to ' + state.myName + '!');
-      }
-    } else {
-      var def = target.units;
-      var dmg = unit.atk + Math.floor(Math.random() * 5);
-      def.hp -= dmg;
-      addLog(unit.name + ' attacked ' + def.name + ' in ' + target.name + ' for ' + dmg + ' damage!');
-
-      if (def.hp > 0 && !isRanged) {
-        var ret = def.def + Math.floor(Math.random() * 3);
-        unit.hp -= ret;
-        addLog(def.name + ' fired back for ' + ret + ' damage.');
-      }
-      if (def.hp <= 0) {
-        target.units.shift();
-        addLog('Enemy ' + def.name + ' in ' + target.name + ' was destroyed!');
-      }
-      if (unit.hp <= 0) {
-        origin.units.splice(state.selectedUnit, 1);
-        addLog('Your ' + unit.name + ' was destroyed in battle!');
